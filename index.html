@@ -569,12 +569,28 @@
 
     function weekExpected(wk){ ensureWeekDates(wk); return expectedHoursForRange(wk.start, wk.end); }
 
-    function workerDiffTotal(worker){
-      return (worker.weeks||[]).reduce((s,wk)=>{ const exp=weekExpected(wk); return s + ((wk.hours||0) - exp); }, 0);
+    function getWeekEntry(worker, weekNumber, year){
+      return (worker.weeks||[]).find(wk => wk.weekNumber===weekNumber && wk.year===year);
     }
 
     function workerDiffMonth(worker, m, y){
-      return (worker.weeks||[]).filter(wk=>{ ensureWeekDates(wk); return wk.year===y && wk.month===m; }).reduce((s,wk)=>{ const exp=weekExpected(wk); return s + ((wk.hours||0) - exp); }, 0);
+      // Calcule l'écart en parcourant les semaines du mois et en soustrayant attendu - heures
+      const weeks = getWeeksInMonth(m, y);
+      return weeks.reduce((sum, wk) => {
+        const entry = getWeekEntry(worker, wk.weekNumber, y);
+        const hours = entry ? entry.hours || 0 : 0;
+        const exp = expectedHoursForRange(wk.start, wk.end);
+        return sum + (hours - exp);
+      }, 0);
+    }
+
+    function workerDiffTotal(worker){
+      // Écart total sur toutes les semaines connues (heures - attendu)
+      return (worker.weeks||[]).reduce((sum, wk) => {
+        ensureWeekDates(wk);
+        const exp = expectedHoursForRange(wk.start, wk.end);
+        return sum + ((wk.hours||0) - exp);
+      }, 0);
     }
 
     function normalizeAllWorkers(){
@@ -619,7 +635,7 @@
         const rec=(w.weeks||[]).find(x=>x.weekNumber===wk.weekNumber && x.year===y);
         const expected=expectedHoursForRange(wk.start,wk.end);
         const hours=rec?rec.hours:'';
-        const diff=rec? ((rec.difference = (rec.hours||0) - expected)) : 0;
+        const diff=rec? ((rec.hours||0) - expected) : 0;
         const card=document.createElement('div'); card.className='week-card';
         card.innerHTML=`<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
           <h4>Semaine ${wk.weekNumber}</h4><span class="tag">Attendu ${expected}h</span>
