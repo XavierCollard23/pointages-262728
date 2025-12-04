@@ -567,7 +567,14 @@
       wk.year = wk.year ?? wk.start.getFullYear();
     }
 
-    function weekExpected(wk){ ensureWeekDates(wk); return expectedHoursForRange(wk.start, wk.end); }
+    function weekExpected(wk){
+      const yr = wk.year || new Date().getFullYear();
+      const range = getWeekRange(yr, wk.weekNumber || 1);
+      wk.start = range.start; wk.end = range.end;
+      wk.month = wk.month ?? wk.start.getMonth();
+      wk.year = wk.year ?? wk.start.getFullYear();
+      return expectedHoursForRange(wk.start, wk.end);
+    }
 
     function getWeekEntry(worker, weekNumber, year){
       return (worker.weeks||[]).find(wk => wk.weekNumber===weekNumber && wk.year===year);
@@ -588,7 +595,7 @@
       // Écart total sur toutes les semaines connues (heures - attendu)
       return (worker.weeks||[]).reduce((sum, wk) => {
         ensureWeekDates(wk);
-        const exp = expectedHoursForRange(wk.start, wk.end);
+        const exp = weekExpected(wk);
         return sum + ((wk.hours||0) - exp);
       }, 0);
     }
@@ -634,8 +641,8 @@
       weeks.forEach(wk=>{
         const rec=(w.weeks||[]).find(x=>x.weekNumber===wk.weekNumber && x.year===y);
         const expected=expectedHoursForRange(wk.start,wk.end);
-        const hours=rec?rec.hours:'';
-        const diff=rec? ((rec.hours||0) - expected) : 0;
+        const hours=rec?rec.hours||0:0;
+        const diff=hours - expected;
         const card=document.createElement('div'); card.className='week-card';
         card.innerHTML=`<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
           <h4>Semaine ${wk.weekNumber}</h4><span class="tag">Attendu ${expected}h</span>
